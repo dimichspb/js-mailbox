@@ -1,8 +1,29 @@
+/**
+ * Javascript one page mailbox application
+ *
+ * @author Dmitry Tarantin <dimichspb@gmail.com>
+ */
+
+
+// Constants declaration block
+
 const APIurl = "http://guess.dev.altworx.com";
 const APIgetFolders = "/api/folders";
 const APIgetMessages = "/api/messages";
 const APIputMessage = "/api/messages/";
 const APIdeleteMessage = "/api/messages/";
+
+
+// Objects declaration block
+
+
+/**
+ * Filter object used to set filters for messages listing
+ *
+ * @param filterName
+ * @param filterValue
+ * @constructor
+ */
 
 function Filter(filterName,
                 filterValue)
@@ -12,6 +33,15 @@ function Filter(filterName,
 }
 
 
+/**
+ * Priority object used to specify order and element class for each type of priority for sorting and rendering
+ * message elements reasons
+ *
+ * @param priorityOrder
+ * @param priorityClass
+ * @constructor
+ */
+
 function Priority(priorityOrder,
                   priorityClass)
 {
@@ -19,9 +49,24 @@ function Priority(priorityOrder,
     this.class = priorityClass;
 }
 
+
+/**
+ * Message object specifies message's attributes we get from API. We don't use this object actually and it is specified
+ * here only to know message better.
+ *
+ * @param messageBody
+ * @param messageId
+ * @param messageIsFavourited
+ * @param messageIsOpen
+ * @param messagePriority
+ * @param messageSendDate
+ * @param messageSender
+ * @param messageSubject
+ */
+
 function message(messageBody,
                  messageId,
-                 messageIsFavaourited,
+                 messageIsFavourited,
                  messageIsOpen,
                  messagePriority,
                  messageSendDate,
@@ -31,7 +76,7 @@ function message(messageBody,
 
     this.body = messageBody;
     this.id = messageId;
-    this.isFavourited = messageIsFavaourited;
+    this.isFavourited = messageIsFavourited;
     this.isOpen = messageIsOpen;
     this.priority = messagePriority;
     this.sendDate = messageSendDate;
@@ -39,7 +84,21 @@ function message(messageBody,
     this.subject = messageSubject;
 }
 
+// Global variables declaration block
+
+/**
+ * Variable filters used to store all filter objects
+ *
+ * @type {Array}
+ */
+
 var filters = [];
+
+/**
+ * Object priority used to store the list of all possible priority attribute values
+ *
+ * @type {{low: Priority, high: Priority, urgent: Priority}}
+ */
 
 var priority = {
     'low': new Priority(0, 'label-info'),
@@ -47,13 +106,24 @@ var priority = {
     'urgent': new Priority(2, 'label-danger')
 };
 
-var messagesList = $("#messages-list");
-var foldersList = $("#folders-list");
-var filterForm = $("#filter-form");
-var filterInputs = $("[data-filter-name]");
-var searchField = $("#search-message-field");
+// JQuery HTML elements variables declaration block
+
+var messagesList = $("#messages-list"); // the list of the message nodes container
+var foldersList = $("#folders-list"); // the list of folder nodes container
+var filterForm = $("#filter-form"); // filters form node
+var filterInputs = $("[data-filter-name]"); // the list of all filter inputs
+var searchField = $("#search-message-field"); // search input field
+
+// API working functions block
 
 
+/**
+ * Sends GET request to API and gets JSON with folders list from server
+ *
+ * runs setFolders() function to show and store folders if request done well and
+ * alerts user if it fails
+ *
+ */
 function getFoldersFromAPI() {
     $.getJSON( APIurl + APIgetFolders)
         .done(function(json) {
@@ -64,6 +134,14 @@ function getFoldersFromAPI() {
         });
 }
 
+/**
+ * Sends GET request with specified parameter folder to API and gets JSON with messages list of the folder from server
+ *
+ * runs setMessages() function to show and store messages if request done well and
+ * alerts user if it fails
+ *
+ * @param folderId
+ */
 function getMessagesByFolderIdFromAPI(folderId) {
     $.getJSON( APIurl + APIgetMessages, {
         'folder': folderId
@@ -75,6 +153,16 @@ function getMessagesByFolderIdFromAPI(folderId) {
             alert( "Request to messages API failed: " + textStatus + "," + error);
         });
 }
+
+/**
+ * Send PUT request to API with message object and message's id specified
+ *
+ * TODO: current version of API doesn't allow cross domain requests.
+ * TODO: The function's body has been commented until the issue is fixed
+ * TODO: message ID parameter is specified as Integer in original Task, but API returns string value
+ *
+ * @param messageIndex Using storage index of message we need to send to server
+ */
 
 function putMessageToAPI(messageIndex) {
     var message = getMessageFromStorage(messageIndex);
@@ -91,6 +179,16 @@ function putMessageToAPI(messageIndex) {
 */
 }
 
+/**
+ * Send DELETE request to API with message object and message's id specified
+ *
+ * TODO: current version of API doesn't allow cross domain requests.
+ * TODO: The function's body has been commented until the issue is fixed
+ * TODO: message ID parameter is specified as Integer in original Task, but API returns string value
+ *
+ * @param messageIndex
+ */
+
 function deleteMessageFromAPI(messageIndex) {
     var message = getMessageFromStorage(messageIndex);
 /*
@@ -105,9 +203,18 @@ function deleteMessageFromAPI(messageIndex) {
 */
 }
 
-function setFolders(json) {
-//    console.log(json.folders);
+// API results working functions block
 
+/**
+ * Gets folders JSON object we have from API, sorts it by Order field and in case we have browser which allows to store
+ * objects in Storage do the jobs - save folders to storage, show folders on page, set active folder to first element.
+ *
+ * Alarms user if browser has no Storage feature
+ *
+ * @param json
+ */
+
+function setFolders(json) {
     var folders = json.folders;
 
     folders.sort(function(a, b) {
@@ -126,9 +233,17 @@ function setFolders(json) {
     }
 }
 
-function setMessages(json){
-//    console.log(json);
+/**
+ * Gets messages JSON object we have from API, sorts it by Priority field (using attribute Order of Priority object)
+ * and in case we have browser which allows to store objects in Storage do the jobs - save messages to storage,
+ * show messages on the page.
+ *
+ * Alarms user if browser has no Storage feature
+ *
+ * @param json
+ */
 
+function setMessages(json){
     var messages = json.messages;
 
     messages.sort(function(a, b) {
@@ -145,6 +260,198 @@ function setMessages(json){
         alert('Sorry, your browser is too old');
     }
 }
+
+// Message working functions block
+
+/**
+ * Toggles the attribute of the message in Storage. Attribute is specified by Name, message is specified by Index
+ *
+ * @param messageIndex
+ * @param attributeName
+ * @param toggleFlag if specified the value will be assigned to the attribute, and attribute value will be toggled to
+ *                   opposite otherwise.
+ */
+
+function toggleMessageAttribute(messageIndex, attributeName, toggleFlag) {
+    var message = getMessageFromStorage(messageIndex);
+
+    if (toggleFlag == undefined) {
+        message[attributeName] = !message[attributeName];
+    } else {
+        message[attributeName] = toggleFlag;
+    }
+
+    saveMessageToStorage(message, messageIndex);
+}
+
+/**
+ * Marks the message as Favourited or not - toggle isFavourited attribute of the message in Storage, puts the updated
+ * object to API, updates message's node in HTML DOM
+ *
+ * @param messageIndex
+ */
+
+function favouriteMessage(messageIndex) {
+    toggleMessageAttribute(messageIndex, 'isFavourited');
+    putMessageToAPI(messageIndex);
+    updateMessageNode(messageIndex);
+}
+
+/**
+ * Deletes message - deletes message from API, deletes message from Storage, removes message node from HTML DOM
+ *
+ * @param messageIndex
+ */
+
+function deleteMessage(messageIndex) {
+    deleteMessageFromAPI(messageIndex);
+    deleteMessageFromStorage(messageIndex);
+    removeMessageNode(messageIndex);
+}
+
+/**
+ * Opens message - opens message Modal window, toggles message's isOpen attribute to true, puts updates message to API,
+ * updates message's node in HTML DOM
+ *
+ * @param messageIndex
+ */
+
+function openMessage(messageIndex) {
+    openMessageModal(messageIndex);
+    toggleMessageAttribute(messageIndex, 'isOpen', true);
+    putMessageToAPI(messageIndex);
+    updateMessageNode(messageIndex);
+}
+
+// Storage working functions block
+
+/**
+ * Stores folders JSON to Storage's item folders
+ *
+ * @param folders
+ */
+
+function saveFoldersToStorage(folders) {
+    sessionStorage.setItem('folders', JSON.stringify(folders));
+}
+
+/**
+ * Returns parsed folders JSON from Storage's item folders;
+ *
+ * @returns {*}
+ */
+
+function getFoldersFromStorage() {
+    return $.parseJSON(sessionStorage.getItem('folders'));
+}
+
+/**
+ * Stores messages JSON to Storage's item messages
+ *
+ * @param messages
+ */
+
+function saveMessagesToStorage(messages) {
+    sessionStorage.setItem('messages', JSON.stringify(messages));
+}
+
+/**
+ * Returns parsed messages JSON from Storage's item messages
+ *
+ * @returns {*}
+ */
+
+function getMessagesFromStorage() {
+    return $.parseJSON(sessionStorage.getItem('messages'));
+}
+
+
+/**
+ * Saves specified message into Storage with specified Index
+ *
+ * @param message
+ * @param messageIndex
+ */
+
+function saveMessageToStorage(message, messageIndex) {
+    var messages = getMessagesFromStorage();
+    messages[messageIndex] = message;
+    sessionStorage.setItem('messages', JSON.stringify(messages));
+}
+
+/**
+ * Returns message with specified Index from Storage
+ *
+ * @param messageIndex
+ * @returns {*}
+ */
+
+function getMessageFromStorage(messageIndex) {
+    var messages = getMessagesFromStorage();
+    return messages[messageIndex];
+}
+
+/**
+ * Deletes message with specified Index from Storage
+ *
+ * @param messageIndex
+ */
+
+function deleteMessageFromStorage(messageIndex) {
+    var messages = getMessagesFromStorage();
+    delete messages[messageIndex];
+
+    saveMessagesToStorage(messages);
+}
+
+// Showing functions block
+
+/**
+ * Adds all folders from Storage to HTML DOM using renderer function
+ */
+
+function showFolders() {
+    var folders = getFoldersFromStorage();
+
+    foldersList.empty(); // we have to empty the folders list container before adding new items
+
+    folders.forEach(function(folderItem, i, foldersArray) {
+        if (folderItem) {
+            foldersList.append(
+                folderItemRender(folderItem, i)
+            )
+        }
+    });
+}
+
+/**
+ * Adds all messages from Storage to HTML DOM using renderer function
+ */
+
+function showMessages() {
+    var messages = getMessagesFromStorage();
+
+    setFilters(); // set filters
+    messagesList.empty(); // we have to empty the messages list container before adding new items
+
+    messages.forEach(function(messageItem, i, messagesArray) {
+        if (messageItem) {
+            messagesList.append(
+                messageItemRender(messageItem, i)
+            )
+        }
+    });
+}
+
+// Folder and message renderers block
+
+/**
+ * Folder node renderer function
+ *
+ * @param folderItem
+ * @param i
+ * @returns {*|jQuery}
+ */
 
 function folderItemRender(folderItem, i) {
     return (
@@ -164,8 +471,15 @@ function folderItemRender(folderItem, i) {
     );
 }
 
-function messageItemRender(messageItem, i) {
+/**
+ * Message node renderer function
+ *
+ * @param messageItem
+ * @param i
+ * @returns {void|jQuery}
+ */
 
+function messageItemRender(messageItem, i) {
     var messageFilterFlag = filterMessage(messageItem);
 
     return (
@@ -234,36 +548,13 @@ function messageItemRender(messageItem, i) {
     );
 }
 
-function showFolders() {
+// HTML DOM working functions block
 
-    var folders = getFoldersFromStorage();
-
-    foldersList.empty();
-
-    folders.forEach(function(folderItem, i, arr) {
-        if (folderItem) {
-            foldersList.append(
-                folderItemRender(folderItem, i)
-            )
-        }
-    });
-}
-
-function showMessages() {
-    var messages = getMessagesFromStorage();
-
-    setFilters();
-    messagesList.empty();
-
-    messages.forEach(function(messageItem, i, messagesArray) {
-        if (messageItem) {
-            messagesList.append(
-                messageItemRender(messageItem, i)
-            )
-        }
-    });
-}
-
+/**
+ * Adds active class to selected folder item and place its name to the header of messages list
+ *
+ * @param activeFolderIndex
+ */
 
 function setActiveFolder(activeFolderIndex) {
     var foldersListLiList = foldersList.find("li");
@@ -279,56 +570,25 @@ function setActiveFolder(activeFolderIndex) {
     getMessagesByFolderIdFromAPI(activeFolderId);
 }
 
-function convertDate(dateString) {
-    var date = new Date(dateString);
-    return date.getFullYear() + '-' + (parseInt(date.getMonth())+1) + '-' + date.getDate();
+/**
+ * Returns message node by Index
+ *
+ * @param messageIndex
+ * @returns {Array.<T>|*}
+ */
+
+function getMessageNode(messageIndex) {
+    var messagesListAList = messagesList.find("a");
+    return messagesListAList.filter(function(){
+        return $(this).data('message-index') === messageIndex;
+    });
 }
 
-function getMessageFromStorage(messageIndex) {
-    var messages = getMessagesFromStorage();
-    return messages[messageIndex];
-}
-
-function saveMessageToStorage(message, messageIndex) {
-    var messages = getMessagesFromStorage();
-    messages[messageIndex] = message;
-    sessionStorage.setItem('messages', JSON.stringify(messages));
-}
-
-function getMessagesFromStorage() {
-    return $.parseJSON(sessionStorage.getItem('messages'));
-}
-
-function saveMessagesToStorage(messages) {
-    sessionStorage.setItem('messages', JSON.stringify(messages));
-}
-
-function getFoldersFromStorage() {
-    return $.parseJSON(sessionStorage.getItem('folders'));
-}
-
-function saveFoldersToStorage(folders) {
-    sessionStorage.setItem('folders', JSON.stringify(folders));
-}
-
-function toggleMessageAttribute(messageIndex, attributeName, toggleFlag) {
-    var message = getMessageFromStorage(messageIndex);
-
-    if (toggleFlag == undefined) {
-        message[attributeName] = !message[attributeName];
-    } else {
-        message[attributeName] = toggleFlag;
-    }
-
-    saveMessageToStorage(message, messageIndex);
-}
-
-function deleteMessageFromStorage(messageIndex) {
-    var messages = getMessagesFromStorage();
-    delete messages[messageIndex];
-
-    saveMessagesToStorage(messages);
-}
+/**
+ * Updates message node from Storage by Index
+ *
+ * @param messageIndex
+ */
 
 function updateMessageNode(messageIndex) {
     var currentMessageNode = getMessageNode(messageIndex);
@@ -339,37 +599,23 @@ function updateMessageNode(messageIndex) {
     currentMessageNode.replaceWith(newMessageNode);
 }
 
+/**
+ * Removes message node by Index
+ *
+ * @param messageIndex
+ */
+
 function removeMessageNode(messageIndex) {
     var currentMessageNode = getMessageNode(messageIndex);
 
     currentMessageNode.remove();
 }
 
-function getMessageNode(messageIndex) {
-    var messagesListAList = messagesList.find("a");
-    return messagesListAList.filter(function(){
-        return $(this).data('message-index') === messageIndex
-    });
-}
-
-function favouriteMessage(messageIndex) {
-    toggleMessageAttribute(messageIndex, 'isFavourited');
-    putMessageToAPI(messageIndex);
-    updateMessageNode(messageIndex);
-}
-
-function deleteMessage(messageIndex) {
-    deleteMessageFromAPI(messageIndex);
-    deleteMessageFromStorage(messageIndex);
-    removeMessageNode(messageIndex);
-}
-
-function openMessage(messageIndex) {
-    openMessageModal(messageIndex);
-    toggleMessageAttribute(messageIndex, 'isOpen', true);
-    putMessageToAPI(messageIndex);
-    updateMessageNode(messageIndex);
-}
+/**
+ * Opens message Modal window
+ *
+ * @param messageIndex
+ */
 
 function openMessageModal(messageIndex) {
     var message = getMessageFromStorage(messageIndex);
@@ -383,27 +629,11 @@ function openMessageModal(messageIndex) {
     messageModal.modal();
 }
 
-function filterMessage(message) {
+// Filter working functions block
 
-    var result = true;
-
-    filters.forEach(function(filterItem) {
-        if ((message[filterItem.name] !== filterItem.value)  && filterItem.value !=='all') result = false;
-    });
-
-    var searchString = searchField[0].value;
-
-    if (searchString !== '') {
-        if (message.sender.toLowerCase().indexOf(searchString.toLowerCase()) < 0 &&
-            message.subject.toLowerCase().indexOf(searchString.toLowerCase()) < 0 &&
-            message.body.toLowerCase().indexOf(searchString.toLowerCase()) < 0) {
-
-            result = false;
-        }
-    }
-
-    return result;
-}
+/**
+ * Set filters array depending on filter inputs
+ */
 
 function setFilters() {
     filters = [];
@@ -422,11 +652,65 @@ function setFilters() {
     });
 }
 
+/**
+ * Returns false if specified message doesn't fall under the filters and true in other case
+ *
+ * @param message
+ * @returns {boolean}
+ */
+
+function filterMessage(message) {
+    var result = true;
+    var searchString = searchField[0].value;
+
+    filters.forEach(function(filterItem) {
+        if ((message[filterItem.name] !== filterItem.value)  && filterItem.value !=='all') result = false;
+    });
+
+    if (searchString !== '') {
+        if (message.sender.toLowerCase().indexOf(searchString.toLowerCase()) < 0 &&
+            message.subject.toLowerCase().indexOf(searchString.toLowerCase()) < 0 &&
+            message.body.toLowerCase().indexOf(searchString.toLowerCase()) < 0) {
+
+            result = false;
+        }
+    }
+
+    return result;
+}
+
+// Extra functions block
+
+/**
+ * Converts date to human format
+ *
+ * @param dateString
+ * @returns {string}
+ */
+
+function convertDate(dateString) {
+    var date = new Date(dateString);
+    return date.getFullYear() + '-' + (parseInt(date.getMonth())+1) + '-' + date.getDate();
+}
+
+// JQuery events specification block
+
+
+/**
+ * Sets folder as active when clicked
+ */
 
 foldersList.on('click', 'li>a', function(e) {
     setActiveFolder($(this).parent().index());
     return false;
 });
+
+/**
+ * Runs the specific function depending on clicked area of message node:
+ * - toggle isFavourite attribute if clicked on star
+ * - delete message if clicked on trash
+ * - open message Modal in other cases
+ */
 
 messagesList.on('click', 'a', function(e) {
     var messageIndex = $(this).data('message-index');
@@ -441,14 +725,26 @@ messagesList.on('click', 'a', function(e) {
     return false;
 });
 
+/**
+ * Updates messages list on filters form submit
+ */
+
 filterForm.on('submit', function() {
     showMessages();
     return false;
 });
 
+/**
+ * Updates messages list on filter inputs change
+ */
+
 filterForm.find("input[type=radio]").on('change', function() {
     showMessages();
 });
+
+/**
+ * Runs getting folders from API when Document is ready
+ */
 
 $(document).ready(function() {
     getFoldersFromAPI();
