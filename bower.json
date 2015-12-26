@@ -4,6 +4,6 @@
     "dependencies": {
           "jquery": ">= 1.9.1",
           "bootstrap": ">= 3.3.6",
-          "chartist": "*"
+          "chartist": ">= 0.9.5"
     }
 }

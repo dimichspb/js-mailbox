@@ -12,6 +12,24 @@ Javascript one page mail box applicatoion.
 - Message counts by priority
 - Highlighting of unread and urgent messages
 
+## Uses
+- Twitter Bootstrap
+- JQuery
+- Chartist.js
+
+## Installation
+
+- Download source files
+
+> git clone https://github.com/dimichspb/js-mailbox
+
+- Install dependencies
+
+> bower install
+	
+- Enjoy
+
+
 ## API documentation
 
 ### GET /api/folders
